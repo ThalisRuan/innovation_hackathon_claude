@@ -26,7 +26,7 @@ The twist: Day Done measures work **delivered**, converted into pre-AI hours. Wh
 3. **Watch the bar fill.** When it reaches a full day (8h by default), you see:
    > **Day done.** You delivered a full day of work by 14:10. The rest of the day is yours: 3h50 back to you.
 
-The **This week** section shows how much time went **back to you** and how much **went to more work** after a full day was already done.
+The **This week** view shows how much time went **back to you** and how much **went to more work** after a full day was already done.
 
 ## How it gives time back
 
