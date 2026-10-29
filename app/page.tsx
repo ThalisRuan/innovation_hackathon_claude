@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { DEFAULT_SETTINGS, summarizeDay, type Settings } from "../lib/day";
 import { createManualEntry, parseMinutesInput, setEntryMinutes } from "../lib/entries";
+import { summarizeWeek } from "../lib/week";
 import { loadEntries, loadSettings, saveEntries, saveSettings, type Entry } from "../lib/storage";
 
 function formatMinutes(minutes: number): string {
@@ -151,6 +152,7 @@ export default function Home() {
 
   const today = entries.filter((e) => isToday(e.createdAt));
   const day = summarizeDay(entries, settings);
+  const week = summarizeWeek(entries, settings);
 
   return (
     <main className="mx-auto max-w-xl px-4 py-12 font-sans">
@@ -295,6 +297,50 @@ export default function Home() {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-sm font-medium text-neutral-500">This week</h2>
+        <div className="mt-4 grid grid-cols-7 gap-2" aria-hidden="true">
+          {week.days.map((d) => (
+            <div key={d.date.toISOString()} className="flex flex-col items-center gap-1">
+              <div className="flex h-20 w-full items-end overflow-hidden rounded bg-neutral-100 dark:bg-neutral-900">
+                <div
+                  className={`w-full ${d.done ? "bg-emerald-500" : "bg-neutral-400 dark:bg-neutral-600"}`}
+                  style={{ height: `${d.progress * 100}%` }}
+                />
+              </div>
+              <span className="text-xs text-neutral-500">
+                {d.date.toLocaleDateString([], { weekday: "short" })}
+              </span>
+            </div>
+          ))}
+        </div>
+        <dl className="mt-6 grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <dt className="text-neutral-500">Pre-AI work delivered</dt>
+            <dd className="text-lg font-semibold">{formatMinutes(week.deliveredMinutes)}</dd>
+          </div>
+          <div>
+            <dt className="text-neutral-500">Full days reached</dt>
+            <dd className="text-lg font-semibold">{week.fullDays}</dd>
+          </div>
+          <div>
+            <dt className="text-neutral-500">Back to you</dt>
+            <dd className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
+              {formatMinutes(week.backToYouMinutes)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-neutral-500">Went to more work</dt>
+            <dd className="text-lg font-semibold">{formatMinutes(week.moreWorkMinutes)}</dd>
+          </div>
+        </dl>
+        {week.aiSavedMinutes > 0 && (
+          <p className="mt-4 text-sm text-neutral-500">
+            On tasks where you noted the time spent, AI saved you {formatMinutes(week.aiSavedMinutes)} this week.
+          </p>
         )}
       </section>
 
