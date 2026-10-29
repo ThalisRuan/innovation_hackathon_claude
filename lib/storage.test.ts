@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { loadEntries, saveEntries, type Entry } from "./storage";
+import { loadEntries, loadSettings, saveEntries, saveSettings, type Entry } from "./storage";
+import { DEFAULT_SETTINGS } from "./day";
 
 class MemoryStorage {
   private data = new Map<string, string>();
@@ -42,6 +43,14 @@ describe("storage", () => {
   it("keeps valid entries when one stored entry is broken", () => {
     store.setItem("day-done:entries", JSON.stringify([entry, { id: 2 }, { ...entry, id: "b", preAiMinutes: null }]));
     expect(loadEntries(store)).toEqual([entry]);
+  });
+
+  it("saves and loads settings, falling back to defaults when missing or invalid", () => {
+    expect(loadSettings(store)).toEqual(DEFAULT_SETTINGS);
+    saveSettings({ targetMinutes: 360, endTime: "17:30" }, store);
+    expect(loadSettings(store)).toEqual({ targetMinutes: 360, endTime: "17:30" });
+    store.setItem("day-done:settings", JSON.stringify({ targetMinutes: -5, endTime: "late" }));
+    expect(loadSettings(store)).toEqual(DEFAULT_SETTINGS);
   });
 
   it("does not throw when storage is unavailable", () => {

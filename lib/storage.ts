@@ -1,3 +1,5 @@
+import { DEFAULT_SETTINGS, type Settings } from "./day";
+
 export type Entry = {
   id: string;
   text: string;
@@ -10,6 +12,7 @@ export type Entry = {
 type KeyValueStore = Pick<Storage, "getItem" | "setItem">;
 
 const KEY = "day-done:entries";
+const SETTINGS_KEY = "day-done:settings";
 
 function isEntry(value: unknown): value is Entry {
   const e = value as Entry;
@@ -42,5 +45,35 @@ export function saveEntries(entries: Entry[], store: KeyValueStore): void {
     store.setItem(KEY, JSON.stringify(entries));
   } catch {
     // Private mode or blocked storage: the app still works for this session.
+  }
+}
+
+function isSettings(value: unknown): value is Settings {
+  const s = value as Settings;
+  return (
+    typeof s === "object" &&
+    s !== null &&
+    Number.isFinite(s.targetMinutes) &&
+    s.targetMinutes >= 60 &&
+    s.targetMinutes <= 960 &&
+    typeof s.endTime === "string" &&
+    /^([01]\d|2[0-3]):[0-5]\d$/.test(s.endTime)
+  );
+}
+
+export function loadSettings(store: KeyValueStore): Settings {
+  try {
+    const parsed: unknown = JSON.parse(store.getItem(SETTINGS_KEY) ?? "null");
+    return isSettings(parsed) ? parsed : DEFAULT_SETTINGS;
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
+
+export function saveSettings(settings: Settings, store: KeyValueStore): void {
+  try {
+    store.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch {
+    // Blocked storage: settings last for this session only.
   }
 }
