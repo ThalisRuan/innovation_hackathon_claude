@@ -3,11 +3,16 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* "done": a full day reached, time back to you. "over": work past the full-day line. */
+  --done: #047857;
+  --over: #b45309;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-done: var(--done);
+  --color-over: var(--over);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -16,6 +21,8 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --done: #34d399;
+    --over: #fbbf24;
   }
 }
 

@@ -210,7 +210,7 @@ export default function Home() {
       {/* Sidebar (desktop) */}
       <aside className="hidden w-64 shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 p-4 md:flex dark:border-neutral-800 dark:bg-neutral-950">
         <div className="flex items-center gap-2 px-2 py-1">
-          <Icon name="logo" className="size-6 text-emerald-500" />
+          <Icon name="logo" className="size-6 text-done" />
           <span className="text-lg font-semibold tracking-tight">Day Done</span>
         </div>
         <p className={`mt-2 px-2 text-sm text-pretty ${muted}`}>
@@ -228,7 +228,7 @@ export default function Home() {
         {/* Top bar */}
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 px-4 dark:border-neutral-800">
           <div className="flex items-center gap-2 md:hidden">
-            <Icon name="logo" className="size-5 text-emerald-500" />
+            <Icon name="logo" className="size-5 text-done" />
             <span className="font-semibold tracking-tight">Day Done</span>
           </div>
           <h1 className="hidden font-medium md:block">{views.find((v) => v.id === view)?.label}</h1>
@@ -256,7 +256,7 @@ export default function Home() {
             {view === "today" && (
               <>
                 {day.done && day.doneAt && (
-                  <div className="animate-enter mb-6 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-5">
+                  <div className="animate-enter mb-6 rounded-2xl border border-done/40 bg-done/10 p-5">
                     <p className="text-xl font-semibold">Day done.</p>
                     <p className="mt-1 text-pretty tabular-nums">
                       You delivered a full day of work by {formatClock(day.doneAt)}.
@@ -265,7 +265,7 @@ export default function Home() {
                         : " Time to stop for today."}
                     </p>
                     {day.afterDoneMinutes > 0 && (
-                      <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+                      <p className="mt-2 text-sm text-over">
                         Since then you logged {formatMinutes(day.afterDoneMinutes)} more. That time went to more work,
                         not back to you.
                       </p>
@@ -275,7 +275,7 @@ export default function Home() {
 
                 {today.length === 0 ? (
                   <div className="flex flex-col items-center px-4 pt-16 text-center">
-                    <Icon name="logo" className="size-10 text-emerald-500" />
+                    <Icon name="logo" className="size-10 text-done" />
                     <h2 className="mt-4 text-2xl font-semibold tracking-tight text-balance">
                       What did you finish today?
                     </h2>
@@ -348,9 +348,16 @@ export default function Home() {
                     <div key={d.date.toISOString()} className="flex flex-col items-center gap-1">
                       <div className="flex h-28 w-full items-end overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-900">
                         <div
-                          className={`w-full transition-[height] duration-500 ease-out ${d.done ? "bg-emerald-500" : "bg-neutral-400 dark:bg-neutral-600"}`}
+                          className={`flex w-full flex-col transition-[height] duration-500 ease-out ${d.done ? "bg-done" : "bg-neutral-400 dark:bg-neutral-600"}`}
                           style={{ height: `${d.progress * 100}%` }}
-                        />
+                        >
+                          {d.afterDoneMinutes > 0 && (
+                            <div
+                              className="bg-over"
+                              style={{ height: `${(d.afterDoneMinutes / d.deliveredMinutes) * 100}%` }}
+                            />
+                          )}
+                        </div>
                       </div>
                       <span className={`text-xs ${muted}`}>{d.date.toLocaleDateString([], { weekday: "short" })}</span>
                     </div>
@@ -360,8 +367,12 @@ export default function Home() {
                   {[
                     { label: "Pre-AI work delivered", value: formatMinutes(week.deliveredMinutes) },
                     { label: "Full days reached", value: String(week.fullDays) },
-                    { label: "Back to you", value: formatMinutes(week.backToYouMinutes), accent: true },
-                    { label: "Went to more work", value: formatMinutes(week.moreWorkMinutes) },
+                    { label: "Back to you", value: formatMinutes(week.backToYouMinutes), tone: "text-done" },
+                    {
+                      label: "Went to more work",
+                      value: formatMinutes(week.moreWorkMinutes),
+                      tone: week.moreWorkMinutes > 0 ? "text-over" : "",
+                    },
                   ].map((s) => (
                     <div
                       key={s.label}
@@ -369,7 +380,7 @@ export default function Home() {
                     >
                       <dt className={muted}>{s.label}</dt>
                       <dd
-                        className={`mt-1 text-2xl font-semibold ${s.accent ? "text-emerald-600 dark:text-emerald-400" : ""}`}
+                        className={`mt-1 text-2xl font-semibold ${s.tone ?? ""}`}
                       >
                         {s.value}
                       </dd>
@@ -520,14 +531,24 @@ export default function Home() {
                 aria-label="Pre-AI work delivered today"
               >
                 <div
-                  className={`h-full rounded-full transition-[width,background-color] duration-500 ease-out ${day.done ? "bg-emerald-500" : "bg-foreground"}`}
+                  className={`flex h-full justify-end rounded-full transition-[width,background-color] duration-500 ease-out ${day.done ? "bg-done" : "bg-foreground"}`}
                   style={{ width: `${day.progress * 100}%` }}
-                />
+                >
+                  {day.afterDoneMinutes > 0 && (
+                    <div
+                      className="h-full bg-over"
+                      style={{ width: `${(day.afterDoneMinutes / day.deliveredMinutes) * 100}%` }}
+                    />
+                  )}
+                </div>
               </div>
-              <span className={`shrink-0 text-xs tabular-nums ${day.done ? "text-emerald-600 dark:text-emerald-400" : muted}`}>
+              <span className={`shrink-0 text-xs tabular-nums ${day.done ? "text-done" : muted}`}>
                 {day.done
                   ? `Day done · ${formatMinutes(day.timeBackMinutes)} back to you`
                   : `${formatMinutes(day.deliveredMinutes)} of ${formatMinutes(settings.targetMinutes)} delivered`}
+                {day.afterDoneMinutes > 0 && (
+                  <span className="text-over"> · {formatMinutes(day.afterDoneMinutes)} over</span>
+                )}
               </span>
             </div>
           </div>
