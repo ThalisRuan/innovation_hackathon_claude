@@ -60,6 +60,41 @@ describe("POST /api/estimate", () => {
     expect(JSON.stringify(await res.json())).not.toContain("network down");
   });
 
+  it("rejects calls from other websites without calling Claude", async () => {
+    const res = await POST(
+      new Request("http://localhost/api/estimate", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "https://evil.example" },
+        body: JSON.stringify({ text: "Something" }),
+      }),
+    );
+    expect(res.status).toBe(403);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("accepts calls from its own site", async () => {
+    claudeSays('{"preAiMinutes": 30, "actualMinutes": null, "reason": "Quick."}');
+    const res = await POST(
+      new Request("http://localhost/api/estimate", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost" },
+        body: JSON.stringify({ text: "Something" }),
+      }),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("rejects non-JSON and oversized bodies without calling Claude", async () => {
+    const plain = new Request("http://localhost/api/estimate", {
+      method: "POST",
+      headers: { "content-type": "text/plain" },
+      body: JSON.stringify({ text: "Something" }),
+    });
+    expect((await POST(plain)).status).toBe(415);
+    expect((await POST(request({ text: "x".repeat(5000) }))).status).toBe(413);
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("returns 500 when the API key is not configured", async () => {
     delete process.env.ANTHROPIC_API_KEY;
     const res = await POST(request({ text: "Something" }));

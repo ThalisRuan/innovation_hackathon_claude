@@ -6,6 +6,9 @@ const MODEL = "claude-haiku-5-5";
 
 export const maxDuration = 30;
 
+// One line of up to 300 characters fits easily in 2 KB.
+const MAX_BODY_BYTES = 2048;
+
 function error(status: number, message: string) {
   return Response.json({ error: message }, { status });
 }
@@ -19,14 +22,42 @@ function clientKey(request: Request): string {
   );
 }
 
+// Browsers send Origin on cross-site requests; only our own pages may spend the Claude budget.
+function isOtherSite(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+  const host = request.headers.get("host") ?? new URL(request.url).host;
+  try {
+    return new URL(origin).host !== host;
+  } catch {
+    return true;
+  }
+}
+
 export async function POST(request: Request) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return error(500, "The estimate service is not configured.");
   }
 
+  if (isOtherSite(request)) {
+    return error(403, "This endpoint only accepts requests from Day Done.");
+  }
+
+  if (!request.headers.get("content-type")?.includes("application/json")) {
+    return error(415, "Send JSON.");
+  }
+
+  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) {
+    return error(413, "Send one line describing a task you finished.");
+  }
+
   let body: unknown;
   try {
-    body = await request.json();
+    const raw = await request.text();
+    if (raw.length > MAX_BODY_BYTES) {
+      return error(413, "Send one line describing a task you finished.");
+    }
+    body = JSON.parse(raw);
   } catch {
     return error(400, "Send one line describing a task you finished.");
   }
@@ -56,7 +87,8 @@ export async function POST(request: Request) {
     }
     return Response.json(estimate);
   } catch (err) {
-    console.error("Estimate request failed", err);
+    const { status, message } = err as { status?: number; message?: string };
+    console.error("Estimate request failed", { status, message });
     return error(502, "Could not reach Claude right now. You can enter the minutes yourself.");
   }
 }
