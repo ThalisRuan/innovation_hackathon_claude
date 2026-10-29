@@ -1,10 +1,10 @@
-# Pre-AI Clock — PRD
+# Day Done — PRD
 
 > Built for the Claude Innovation Hackathon ("Take the load off"). Date: 2026-10-29. Build time: 3 hours, solo.
 
 ## 1. One-liner
 
-**Pre-AI Clock tells freelancers when they have already delivered a full day's work — measured in pre-AI hours — so the time AI saves goes back to them, not to more client work.**
+**Day Done tells freelancers when they have already delivered a full day's work — measured in pre-AI hours — so the time AI saves goes back to them, not to more client work.**
 
 ## 2. Who it's for
 
@@ -24,7 +24,7 @@ The freelancer has no way to see that they already delivered a "normal" day of w
 
 This builds on the idea **"A tracker for saved time"** — *logs the hours AI saved and shows whether they went to more work or back to people.*
 
-Our twist: instead of measuring time *spent*, Pre-AI Clock measures work *delivered*, converted into the hours it would have taken before AI. When that reaches a normal working day, the day is done.
+Our twist: instead of measuring time *spent*, Day Done measures work *delivered*, converted into the hours it would have taken before AI. When that reaches a normal working day, the day is done.
 
 ## 5. How it works
 
@@ -80,7 +80,7 @@ The one rule is: give people time back, not help them do even more.
 
 ## 10. Judging alignment
 
-| Criterion | Weight | How Pre-AI Clock scores |
+| Criterion | Weight | How Day Done scores |
 |---|---|---|
 | Takes on the problem | 30% | Targets compression burnout directly; names its user (freelancers); builds on "A tracker for saved time" |
 | It actually works | 30% | Live site on Vercel; real Claude estimates; real persistence; no mocked data |
@@ -116,6 +116,6 @@ The one rule is: give people time back, not help them do even more.
 
 ## 14. Open questions
 
-- [ ] Claude API key available?
+- [x] Claude API key: own key with $100 credits
 - [ ] Vercel and GitHub accounts ready?
-- [ ] Final product name (working name: Pre-AI Clock)
+- [x] Final product name: **Day Done** — *"You've already worked a full day. AI just made it shorter."*
