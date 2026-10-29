@@ -6,6 +6,7 @@ export type Entry = {
   preAiMinutes: number;
   actualMinutes: number | null;
   reason: string;
+  edited?: boolean; // true when the minutes are the user's own estimate, not Claude's
   createdAt: string; // ISO 8601, UTC
 };
 
@@ -24,6 +25,7 @@ function isEntry(value: unknown): value is Entry {
     Number.isFinite(e.preAiMinutes) &&
     (e.actualMinutes === null || Number.isFinite(e.actualMinutes)) &&
     typeof e.reason === "string" &&
+    (e.edited === undefined || typeof e.edited === "boolean") &&
     typeof e.createdAt === "string"
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { DEFAULT_SETTINGS, summarizeDay, type Settings } from "../lib/day";
+import { createManualEntry, parseMinutesInput, setEntryMinutes } from "../lib/entries";
 import { loadEntries, loadSettings, saveEntries, saveSettings, type Entry } from "../lib/storage";
 
 function formatMinutes(minutes: number): string {
@@ -19,12 +20,30 @@ function formatClock(date: Date): string {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function isEstimatePayload(
+  value: unknown,
+): value is Pick<Entry, "preAiMinutes" | "actualMinutes" | "reason"> {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    Number.isFinite(v.preAiMinutes) &&
+    (v.actualMinutes === null || Number.isFinite(v.actualMinutes)) &&
+    typeof v.reason === "string"
+  );
+}
+
 export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  // The line Claude could not estimate, so the user can enter the minutes themselves.
+  const [failedLine, setFailedLine] = useState<string | null>(null);
+  const [manualInput, setManualInput] = useState("");
+  const [manualError, setManualError] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editInput, setEditInput] = useState("");
 
   useEffect(() => {
     setEntries(loadEntries(window.localStorage));
@@ -51,15 +70,36 @@ export default function Home() {
 
     setLoading(true);
     setError(null);
+    setFailedLine(null);
     try {
       const res = await fetch("/api/estimate", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ text: line }),
       });
-      const data = await res.json().catch(() => ({}));
+      let data: unknown;
+      try {
+        data = await res.json();
+      } catch {
+        setError("Something went wrong. Please try again.");
+        setFailedLine(line);
+        return;
+      }
       if (!res.ok) {
-        setError(data.error ?? "Something went wrong. Please try again.");
+        if (res.status !== 400) setFailedLine(line);
+        const message =
+          typeof data === "object" &&
+          data !== null &&
+          "error" in data &&
+          typeof (data as { error: unknown }).error === "string"
+            ? (data as { error: string }).error
+            : "Something went wrong. Please try again.";
+        setError(message);
+        return;
+      }
+      if (!isEstimatePayload(data)) {
+        setError("Something went wrong. Please try again.");
+        setFailedLine(line);
         return;
       }
       update((current) => [
@@ -76,9 +116,37 @@ export default function Home() {
       setText("");
     } catch {
       setError("Could not reach the server. Check your connection.");
+      setFailedLine(line);
     } finally {
       setLoading(false);
     }
+  }
+
+  function onManualSubmit(event: FormEvent) {
+    event.preventDefault();
+    const minutes = parseMinutesInput(manualInput);
+    if (!failedLine || minutes === null) {
+      setManualError(true);
+      return;
+    }
+    const line = failedLine;
+    update((current) => [createManualEntry(line, minutes), ...current]);
+    setFailedLine(null);
+    setManualInput("");
+    setManualError(false);
+    setError(null);
+    setText("");
+  }
+
+  function startEdit(entry: Entry) {
+    setEditingId(entry.id);
+    setEditInput(formatMinutes(entry.preAiMinutes));
+  }
+
+  function saveEdit(id: string) {
+    const minutes = parseMinutesInput(editInput);
+    if (minutes !== null) update((current) => setEntryMinutes(current, id, minutes));
+    setEditingId(null);
   }
 
   const today = entries.filter((e) => isToday(e.createdAt));
@@ -158,6 +226,33 @@ export default function Home() {
         )}
       </form>
 
+      {failedLine && (
+        <form onSubmit={onManualSubmit} className="mt-3 rounded-lg border border-neutral-300 p-4 dark:border-neutral-700">
+          <label htmlFor="manual" className="block text-sm">
+            How long would <span className="font-medium">&ldquo;{failedLine}&rdquo;</span> have taken you without AI?
+          </label>
+          <div className="mt-2 flex gap-2">
+            <input
+              id="manual"
+              value={manualInput}
+              onChange={(e) => {
+                setManualInput(e.target.value);
+                setManualError(false);
+              }}
+              placeholder="e.g. 2h or 1h30"
+              className="w-40 rounded-lg border border-neutral-300 bg-transparent px-3 py-2 dark:border-neutral-700"
+            />
+            <button type="submit" className="rounded-lg bg-foreground px-4 py-2 text-background">
+              Save
+            </button>
+            <button type="button" onClick={() => setFailedLine(null)} className="px-2 text-sm text-neutral-500">
+              Cancel
+            </button>
+          </div>
+          {manualError && <p className="mt-2 text-sm text-red-600">Try a time like 45min, 2h or 1h30 (up to 16h).</p>}
+        </form>
+      )}
+
       <section className="mt-10">
         <h2 className="text-sm font-medium text-neutral-500">Finished today</h2>
         {today.length === 0 ? (
@@ -168,9 +263,32 @@ export default function Home() {
               <li key={e.id} className="py-3">
                 <div className="flex items-baseline justify-between gap-4">
                   <span>{e.text}</span>
-                  <span className="shrink-0 font-medium">{formatMinutes(e.preAiMinutes)}</span>
+                  {editingId === e.id ? (
+                    <input
+                      autoFocus
+                      aria-label={`Pre-AI time for ${e.text}`}
+                      value={editInput}
+                      onChange={(ev) => setEditInput(ev.target.value)}
+                      onBlur={() => saveEdit(e.id)}
+                      onKeyDown={(ev) => {
+                        if (ev.key === "Enter") saveEdit(e.id);
+                        if (ev.key === "Escape") setEditingId(null);
+                      }}
+                      className="w-24 shrink-0 rounded border border-neutral-300 bg-transparent px-2 py-0.5 text-right dark:border-neutral-700"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => startEdit(e)}
+                      title="Change this estimate"
+                      className="shrink-0 font-medium underline decoration-dotted underline-offset-4"
+                    >
+                      {formatMinutes(e.preAiMinutes)}
+                    </button>
+                  )}
                 </div>
                 <p className="mt-1 text-sm text-neutral-500">
+                  {e.edited && e.reason !== "Estimated by you." && "Your estimate. Claude said: "}
                   {e.reason}
                   {e.actualMinutes !== null && ` You spent ${formatMinutes(e.actualMinutes)}.`}
                 </p>
