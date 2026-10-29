@@ -97,7 +97,7 @@ day bar, "Day done", weekly view: computed in the browser (lib/day.ts, lib/week.
 | `lib/entries.ts` | Editing estimates and manual entries |
 | `lib/storage.ts` | Safe `localStorage` read/write |
 
-**Tests:** 33 unit tests (`npm test`) cover the API route, estimate parsing, day and week calculations, editing and storage.
+**Tests:** 40 unit tests (`npm test`, 97% line coverage on `lib/` and the API with `npm run test:coverage`) cover the API route, estimate parsing, day and week calculations, editing and storage.
 
 ## Built with
 
